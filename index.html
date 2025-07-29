@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FF9900">
+  <link rel="manifest" href="manifest.json">
+  <title>Amazon Flex 7-Day Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+    .container { max-width: 400px; margin: auto; padding: 20px; }
+    h1 { text-align: center; color: #FF9900; }
+    .day { background: #fff; margin: 8px 0; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    label { display: block; font-weight: bold; }
+    input { width: 100%; padding: 8px; margin-top: 5px; }
+    #total { background: #FF9900; color: white; padding: 15px; border-radius: 8px; text-align: center; font-size: 18px; margin-top: 15px; }
+    button { background: #4CAF50; color: white; padding: 10px; border: none; width: 100%; border-radius: 8px; margin-top: 10px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>7-Day Hours Tracker</h1>
+    <div id="days"></div>
+    <div id="total">Total: 0 hrs</div>
+    <button onclick="resetData()">Reset Data</button>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const daysContainer = document.getElementById('days');
+      const totalDiv = document.getElementById('total');
+      const today = new Date();
+      
+      let days = [];
+      for (let i = 0; i < 7; i++) {
+        let d = new Date();
+        d.setDate(today.getDate() - i);
+        days.push(d);
+      }
+      
+      let saved = JSON.parse(localStorage.getItem('flexHours') || '{}');
+      
+      function updateTotal() {
+        let total = 0;
+        document.querySelectorAll('.hourInput').forEach(inp => {
+          total += parseFloat(inp.value || 0);
+        });
+        totalDiv.innerText = `Total: ${total} hrs`;
+      }
+      
+      days.forEach(date => {
+        const key = date.toISOString().split('T')[0];
+        const hours = saved[key] || '';
+        const div = document.createElement('div');
+        div.className = 'day';
+        div.innerHTML = `<label>${date.toLocaleDateString('en-GB')}</label>
+          <input type='number' class='hourInput' data-key='${key}' value='${hours}' min='0' step='0.5'>`;
+        daysContainer.appendChild(div);
+      });
+      
+      document.querySelectorAll('.hourInput').forEach(inp => {
+        inp.addEventListener('input', e => {
+          const key = e.target.dataset.key;
+          saved[key] = e.target.value;
+          localStorage.setItem('flexHours', JSON.stringify(saved));
+          updateTotal();
+        });
+      });
+      
+      updateTotal();
+      
+      window.resetData = function() {
+        if (confirm('Reset all saved hours?')) {
+          localStorage.removeItem('flexHours');
+          document.querySelectorAll('.hourInput').forEach(inp => inp.value = '');
+          updateTotal();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
